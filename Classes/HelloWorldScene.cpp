@@ -30,6 +30,7 @@ bool HelloWorld::init()
     Size visibleSize = Director::getInstance()->getVisibleSize();
     Point origin = Director::getInstance()->getVisibleOrigin();
 
+    connectToAppWarp();
     /////////////////////////////
     // 2. add a menu item with "X" image, which is clicked to quit the program
     //    you may modify it.
@@ -72,10 +73,39 @@ bool HelloWorld::init()
     // add the sprite as a child to this layer
     this->addChild(sprite, 0);
     
+    auto touchListener = EventListenerTouchOneByOne::create();
+    touchListener->onTouchBegan = CC_CALLBACK_2(HelloWorld::touchBegan, this);
+    getEventDispatcher()->addEventListenerWithFixedPriority(touchListener, 100);
     return true;
 }
 
+std::string genRandom()
+{
+    std::string charStr;
+    srand (time(NULL));
+    
+    for (int i = 0; i < 10; ++i) {
+        charStr += (char)(65+(rand() % (26)));
+    }
+    
+    return charStr;
+}
 
+void HelloWorld::connectToAppWarp()
+{
+    isConnected = false;
+    AppWarp::Client *warpClientRef;
+        isFirstLaunch = !isFirstLaunch;
+        AppWarp::Client::initialize(APPWARP_APP_KEY,APPWARP_SECRET_KEY);
+        warpClientRef = AppWarp::Client::getInstance();
+        warpClientRef->setRecoveryAllowance(60);
+        warpClientRef->setConnectionRequestListener(this);
+        warpClientRef->setNotificationListener(this);
+        warpClientRef->setRoomRequestListener(this);
+        warpClientRef->setZoneRequestListener(this);
+        userName = genRandom();
+        warpClientRef->connect(userName);
+}
 void HelloWorld::menuCloseCallback(Object* pSender)
 {
     Director::getInstance()->end();
@@ -84,3 +114,115 @@ void HelloWorld::menuCloseCallback(Object* pSender)
     exit(0);
 #endif
 }
+
+void HelloWorld::disconnect()
+{
+    AppWarp::Client::getInstance()->disconnect();
+}
+
+
+void HelloWorld::onDisconnectDone(int res)
+{}
+
+void HelloWorld::onConnectDone(int res)
+{
+    if (res==AppWarp::ResultCode::success)
+    {        printf("\nonConnectDone .. SUCCESS..session=%d\n",AppWarp::AppWarpSessionID);
+        AppWarp::Client *warpClientRef;
+        warpClientRef = AppWarp::Client::getInstance();
+        warpClientRef->joinRoom(ROOM_ID);
+        HelloWorld::createStar(Point(100, 100));
+    }
+    else if (res==AppWarp::ResultCode::success_recovered)
+    {    }
+    else if (res==AppWarp::ResultCode::connection_error_recoverable)
+    {  }
+    else if (res==AppWarp::ResultCode::bad_request)
+    { }
+    else
+    { }
+}
+
+void HelloWorld::update(float time)
+{
+    
+}
+
+
+void HelloWorld::onJoinRoomDone(AppWarp::room revent)
+{
+    if (revent.result==0)
+    {
+        printf("\nonJoinRoomDone .. SUCCESS\n");
+        AppWarp::Client *warpClientRef;
+        warpClientRef = AppWarp::Client::getInstance();
+        warpClientRef->subscribeRoom(ROOM_ID);
+    }
+    else
+        printf("\nonJoinRoomDone .. FAILED\n");
+}
+
+void HelloWorld::onSubscribeRoomDone(AppWarp::room revent)
+{
+    if (revent.result==0)
+    {
+        printf("\nonSubscribeRoomDone .. SUCCESS\n");
+        AppWarp::Client *warpClientRef;
+        warpClientRef = AppWarp::Client::getInstance();
+        std::map<std::string, std::string> properties;
+        properties["1"] = "Owner";
+        properties["2"] = "Manager";
+        properties["3"] = "Team Lead";
+        
+        //  properties.insert(std::pair<std::string, std::string>("1","Owner"));
+        
+        std::vector<std::string> removeArray;
+        warpClientRef->updateRoomProperties(ROOM_ID,properties, removeArray);
+    }
+    else
+        printf("\nonSubscribeRoomDone .. FAILED\n");
+}
+void HelloWorld::sendData(float x, float y, float duration)
+{
+    AppWarp::Client *warpClientRef;
+    warpClientRef = AppWarp::Client::getInstance();
+    
+    std::stringstream str;
+    str <<x << "x" <<y << "d" << duration;
+    warpClientRef->sendChat(str.str());
+}
+
+void HelloWorld::onUpdatePropertyDone(AppWarp::liveroom revent)
+{
+    if (revent.result==0)
+    {
+        printf("onUpdatePropertyDone....Success");
+        std::map<std::string, std::string> properties = revent.properties;
+        std::map<std::string,std::string>::iterator it;
+        for(it = properties.begin(); it != properties.end(); ++it)
+        {
+            //cJSON_AddStringToObject(propJSON, it->first.c_str(),it->second.c_str());
+            printf("key= %s...value= %s",it->first.c_str(),it->second.c_str());
+        }
+        
+        
+    }
+    else
+    {
+        printf("onUpdatePropertyDone....Failed");
+    }
+}
+
+bool HelloWorld::touchBegan(Touch* touch, Event* event){
+    HelloWorld::createStar(touch->getLocation());
+    return true;
+}
+void HelloWorld::createStar(Point p){
+    auto starSprite = Sprite::create("star.png");
+    starSprite->setPosition(p);
+    
+    this->addChild(starSprite, 0);
+}
+
+
+
