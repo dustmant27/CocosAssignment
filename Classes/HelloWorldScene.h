@@ -3,7 +3,7 @@
 
 #include "cocos2d.h"
 #include "appwarp.h"
-
+#include "Box2D/Box2D.h"
 
 #define APPWARP_APP_KEY     "9b1afff73182dae55131f1647f4bbb027d3662e10fa7c5f7b704ee0c33c6e562"
 #define APPWARP_SECRET_KEY  "f64f4516a711e40b57a5afb48f9dff4a42eb893e51e251f2f4f6d117146c844e"
@@ -22,7 +22,9 @@ public:
     
     
     bool isConnected;
+    int tapCount;
     std::string userName;
+    LabelTTF *countLabel;
     bool isFirstLaunch;
         virtual void update(float time);
     
@@ -37,13 +39,14 @@ public:
     
     void onConnectDone(int res);
     void onDisconnectDone(int res);
+    void onChatReceived(AppWarp::chat chatevent);
     void onJoinRoomDone(AppWarp::room revent);
     void onSubscribeRoomDone(AppWarp::room revent);
     void onUpdatePropertyDone(AppWarp::liveroom revent);
     void createStar(Point p);
     void connectToAppWarp();
-    void sendData(float x, float y, float duration);
-
+    void sendData(float x, float y);
+    void sendData(String winLose);
     bool touchBegan(Touch* touch, Event* event);
     
     void disconnect();

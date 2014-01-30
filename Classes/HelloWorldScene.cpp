@@ -48,7 +48,7 @@ bool HelloWorld::init()
     auto menu = Menu::create(closeItem, NULL);
     menu->setPosition(Point::ZERO);
     this->addChild(menu, 1);
-
+    tapCount = 0;
     /////////////////////////////
     // 3. add your codes below...
 
@@ -61,8 +61,13 @@ bool HelloWorld::init()
     label->setPosition(Point(origin.x + visibleSize.width/2,
                             origin.y + visibleSize.height - label->getContentSize().height));
 
-    // add the label as a child to this layer
+       // add the label as a child to this layer
     this->addChild(label, 1);
+    
+    countLabel = (LabelTTF*)LabelTTF::create("0", "Arial", 30);
+    countLabel->setPosition(Point(100, origin.y + visibleSize.height - countLabel->getContentSize().height));
+
+    this->addChild(countLabel, 1);
 
     // add "HelloWorld" splash screen"
     auto sprite = Sprite::create("HelloWorld.png");
@@ -108,6 +113,7 @@ void HelloWorld::connectToAppWarp()
 }
 void HelloWorld::menuCloseCallback(Object* pSender)
 {
+    disconnect();
     Director::getInstance()->end();
 
 #if (CC_TARGET_PLATFORM == CC_PLATFORM_IOS)
@@ -115,8 +121,22 @@ void HelloWorld::menuCloseCallback(Object* pSender)
 #endif
 }
 
+void HelloWorld::onChatReceived(AppWarp::chat chatevent)
+{
+    printf("onChatReceived..");
+    if(chatevent.sender != userName)
+    {
+        std::size_t loc = chatevent.chat.find('!');
+        std::string str1 = chatevent.chat.substr(0,loc);
+        std::string str2 = chatevent.chat.substr(loc+1);
+        float x = (float)std::atof (str1.c_str());
+        float y = (float)std::atof(str2.c_str());
+        HelloWorld::createStar(Point(x, y));
+    }
+}
 void HelloWorld::disconnect()
 {
+    AppWarp::Client::getInstance()->leaveRoom(ROOM_ID);
     AppWarp::Client::getInstance()->disconnect();
 }
 
@@ -131,7 +151,6 @@ void HelloWorld::onConnectDone(int res)
         AppWarp::Client *warpClientRef;
         warpClientRef = AppWarp::Client::getInstance();
         warpClientRef->joinRoom(ROOM_ID);
-        HelloWorld::createStar(Point(100, 100));
     }
     else if (res==AppWarp::ResultCode::success_recovered)
     {    }
@@ -157,6 +176,8 @@ void HelloWorld::onJoinRoomDone(AppWarp::room revent)
         AppWarp::Client *warpClientRef;
         warpClientRef = AppWarp::Client::getInstance();
         warpClientRef->subscribeRoom(ROOM_ID);
+        
+        HelloWorld::createStar(Point(100, 100));
     }
     else
         printf("\nonJoinRoomDone .. FAILED\n");
@@ -182,13 +203,13 @@ void HelloWorld::onSubscribeRoomDone(AppWarp::room revent)
     else
         printf("\nonSubscribeRoomDone .. FAILED\n");
 }
-void HelloWorld::sendData(float x, float y, float duration)
+void HelloWorld::sendData(float x, float y)
 {
     AppWarp::Client *warpClientRef;
     warpClientRef = AppWarp::Client::getInstance();
     
     std::stringstream str;
-    str <<x << "x" <<y << "d" << duration;
+    str <<x << "!" <<y ;
     warpClientRef->sendChat(str.str());
 }
 
@@ -215,6 +236,11 @@ void HelloWorld::onUpdatePropertyDone(AppWarp::liveroom revent)
 
 bool HelloWorld::touchBegan(Touch* touch, Event* event){
     HelloWorld::createStar(touch->getLocation());
+    Point loc = touch->getLocation();
+    sendData(loc.x, loc.y);
+    tapCount ++;
+    countLabel->setString(std::to_string(tapCount));
+    std::cout << tapCount;
     return true;
 }
 void HelloWorld::createStar(Point p){
