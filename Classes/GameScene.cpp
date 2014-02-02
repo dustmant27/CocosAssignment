@@ -129,8 +129,7 @@ void GameScene::onChatReceived(AppWarp::chat chatevent)
         else if (str1=="l"){
             GameScene::disconnect();
             
-            Director::getInstance()->pushScene(PlayerLoseScene::createScene());
-            Director::getInstance()->pause();
+            Director::getInstance()->replaceScene(PlayerLoseScene::createScene());
         }
         else{
             std::string str2 = chatevent.chat.substr(loc+1);
@@ -163,7 +162,6 @@ void GameScene::onConnectDone(int res)
         AppWarp::Client *warpClientRef;
         warpClientRef = AppWarp::Client::getInstance();
         warpClientRef->joinRoom(ROOM_ID);
-        GameScene::sendStringData("init!");
         
     }
     else if (res==AppWarp::ResultCode::success_recovered)
@@ -191,6 +189,7 @@ void GameScene::onJoinRoomDone(AppWarp::room revent)
         warpClientRef = AppWarp::Client::getInstance();
         warpClientRef->subscribeRoom(ROOM_ID);
         
+        GameScene::sendStringData("init!");
         
         Point origin = Director::getInstance()->getVisibleOrigin();
         Size visibleSize = Director::getInstance()->getVisibleSize();
@@ -229,7 +228,6 @@ bool GameScene::touchBegan(Touch* touch, Event* event){
         
         CocosDenshion::SimpleAudioEngine::getInstance()->playEffect("TapSound.wav");
     Point loc = touch->getLocation();
-    sendData(loc.x, loc.y);
     tapCount ++;
         createStar(loc);
     countLabel->setString(std::to_string(tapCount));
@@ -237,8 +235,8 @@ bool GameScene::touchBegan(Touch* touch, Event* event){
     if(tapCount == 50){
         
         GameScene::sendStringData("l!");
-        
-         Director::getInstance()->pushScene(PlayerWinScene::createScene());
+        GameScene::disconnect();
+         Director::getInstance()->replaceScene(PlayerWinScene::createScene());
         getEventDispatcher()->removeEventListener(touchListener);
     }
         
